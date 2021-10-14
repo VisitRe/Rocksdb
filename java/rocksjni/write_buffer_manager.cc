@@ -29,6 +29,20 @@ jlong Java_org_rocksdb_WriteBufferManager_newWriteBufferManager(
 
 /*
  * Class:     org_rocksdb_WriteBufferManager
+ * Method:    newWriteBufferManagerWithoutCache
+ * Signature: (JJ)J
+ */
+jlong Java_org_rocksdb_WriteBufferManager_newWriteBufferManagerWithoutCache(
+    JNIEnv* /*env*/, jclass /*jclazz*/, jlong jbuffer_size) {
+  auto* write_buffer_manager =
+      new std::shared_ptr<ROCKSDB_NAMESPACE::WriteBufferManager>(
+          std::make_shared<ROCKSDB_NAMESPACE::WriteBufferManager>(jbuffer_size,
+                                                                  nullptr));
+  return reinterpret_cast<jlong>(write_buffer_manager);
+}
+
+/*
+ * Class:     org_rocksdb_WriteBufferManager
  * Method:    disposeInternal
  * Signature: (J)V
  */
@@ -39,4 +53,48 @@ void Java_org_rocksdb_WriteBufferManager_disposeInternal(
           jhandle);
   assert(write_buffer_manager != nullptr);
   delete write_buffer_manager;
+}
+
+/*
+ * Class:     org_rocksdb_WriteBufferManager
+ * Method:    getMemoryUsage
+ * Signature: (J)J
+ */
+jlong Java_org_rocksdb_WriteBufferManager_getMemoryUsage(JNIEnv* /*env*/,
+                                                         jobject,
+                                                         jlong jhandle) {
+  auto* write_buffer_manager =
+      reinterpret_cast<std::shared_ptr<ROCKSDB_NAMESPACE::WriteBufferManager>*>(
+          jhandle);
+  assert(write_buffer_manager != nullptr);
+  return static_cast<jlong>(write_buffer_manager->get()->memory_usage());
+}
+
+/*
+ * Class:     org_rocksdb_WriteBufferManager
+ * Method:    getMutableMemtableMemoryUsage
+ * Signature: (J)J
+ */
+jlong Java_org_rocksdb_WriteBufferManager_getMutableMemtableMemoryUsage(
+    JNIEnv* /*env*/, jobject, jlong jhandle) {
+  auto* write_buffer_manager =
+      reinterpret_cast<std::shared_ptr<ROCKSDB_NAMESPACE::WriteBufferManager>*>(
+          jhandle);
+  assert(write_buffer_manager != nullptr);
+  return static_cast<jlong>(
+      write_buffer_manager->get()->mutable_memtable_memory_usage());
+}
+
+/*
+ * Class:     org_rocksdb_WriteBufferManager
+ * Method:    getBufferSize
+ * Signature: (J)J
+ */
+jlong Java_org_rocksdb_WriteBufferManager_getBufferSize(JNIEnv*, jobject,
+                                                        jlong jhandle) {
+  auto* write_buffer_manager =
+      reinterpret_cast<std::shared_ptr<ROCKSDB_NAMESPACE::WriteBufferManager>*>(
+          jhandle);
+  assert(write_buffer_manager != nullptr);
+  return static_cast<jlong>(write_buffer_manager->get()->buffer_size());
 }
