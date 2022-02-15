@@ -56,7 +56,7 @@ void MakeBuilder(
   const WriteOptions write_options;
   TableBuilderOptions tboptions(
       ioptions, moptions, read_options, write_options, internal_comparator,
-      int_tbl_prop_collector_factories, moptions.compressor,
+      int_tbl_prop_collector_factories, moptions.derived_compressor,
       kTestColumnFamilyId, kTestColumnFamilyName, kTestLevel);
   builder->reset(NewTableBuilder(tboptions, writable->get()));
 }

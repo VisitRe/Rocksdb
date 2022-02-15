@@ -1868,8 +1868,9 @@ Status DBImpl::ReFitLevel(ColumnFamilyData* cfd, int level, int target_level) {
                 ->compaction_style) /* output file size limit, not applicable */
         ,
         LLONG_MAX /* max compaction bytes, not applicable */,
-        0 /* output path ID, not applicable */, mutable_cf_options.compressor,
-        Temperature::kUnknown, 0 /* max_subcompactions, not applicable */,
+        0 /* output path ID, not applicable */,
+        mutable_cf_options.derived_compressor, Temperature::kUnknown,
+        0 /* max_subcompactions, not applicable */,
         {} /* grandparents, not applicable */, false /* is manual */,
         "" /* trim_ts */, -1 /* score, not applicable */,
         false /* is deletion compaction, not applicable */,
@@ -4179,7 +4180,7 @@ void DBImpl::BuildCompactionJobInfo(
         newf.first, file_number, meta.oldest_blob_file_number});
   }
   compaction_job_info->blob_compression_type =
-      c->mutable_cf_options()->blob_compressor->GetCompressionType();
+      c->mutable_cf_options()->derived_blob_compressor->GetCompressionType();
 
   // Update BlobFilesInfo.
   for (const auto& blob_file : c->edit()->GetBlobFileAdditions()) {
