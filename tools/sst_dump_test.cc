@@ -20,6 +20,7 @@
 #include "table/table_builder.h"
 #include "test_util/testharness.h"
 #include "test_util/testutil.h"
+#include "util/compressor.h"
 #include "util/defer.h"
 
 namespace ROCKSDB_NAMESPACE {
@@ -129,8 +130,8 @@ class SSTDumpToolTest : public testing::Test {
     tb.reset(opts.table_factory->NewTableBuilder(
         TableBuilderOptions(
             imoptions, moptions, read_options, write_options, ikc,
-            &int_tbl_prop_collector_factories, CompressionType::kNoCompression,
-            CompressionOptions(),
+            &int_tbl_prop_collector_factories,
+            BuiltinCompressor::GetCompressor(CompressionType::kNoCompression),
             TablePropertiesCollectorFactory::Context::kUnknownColumnFamily,
             column_family_name, unknown_level),
         file_writer.get()));

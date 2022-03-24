@@ -171,15 +171,16 @@ TEST_F(FlushJobTest, Empty) {
   auto cfd = versions_->GetColumnFamilySet()->GetDefault();
   EventLogger event_logger(db_options_.info_log.get());
   SnapshotChecker* snapshot_checker = nullptr;  // not relavant
-  FlushJob flush_job(
-      dbname_, versions_->GetColumnFamilySet()->GetDefault(), db_options_,
-      *cfd->GetLatestMutableCFOptions(),
-      std::numeric_limits<uint64_t>::max() /* memtable_id */, env_options_,
-      versions_.get(), &mutex_, &shutting_down_, {}, kMaxSequenceNumber,
-      snapshot_checker, &job_context, FlushReason::kTest, nullptr, nullptr,
-      nullptr, kNoCompression, nullptr, &event_logger, false,
-      true /* sync_output_directory */, true /* write_manifest */,
-      Env::Priority::USER, nullptr /*IOTracer*/, empty_seqno_to_time_mapping_);
+  FlushJob flush_job(dbname_, versions_->GetColumnFamilySet()->GetDefault(),
+                     db_options_, *cfd->GetLatestMutableCFOptions(),
+                     std::numeric_limits<uint64_t>::max() /* memtable_id */,
+                     env_options_, versions_.get(), &mutex_, &shutting_down_,
+                     {}, kMaxSequenceNumber, snapshot_checker, &job_context,
+                     FlushReason::kTest, nullptr, nullptr, nullptr,
+                     BuiltinCompressor::GetCompressor(kNoCompression), nullptr,
+                     &event_logger, false, true /* sync_output_directory */,
+                     true /* write_manifest */, Env::Priority::USER,
+                     nullptr /*IOTracer*/, empty_seqno_to_time_mapping_);
   {
     InstrumentedMutexLock l(&mutex_);
     flush_job.PickMemTable();
@@ -263,8 +264,9 @@ TEST_F(FlushJobTest, NonEmpty) {
       std::numeric_limits<uint64_t>::max() /* memtable_id */, env_options_,
       versions_.get(), &mutex_, &shutting_down_, {}, kMaxSequenceNumber,
       snapshot_checker, &job_context, FlushReason::kTest, nullptr, nullptr,
-      nullptr, kNoCompression, db_options_.statistics.get(), &event_logger,
-      true, true /* sync_output_directory */, true /* write_manifest */,
+      nullptr, BuiltinCompressor::GetCompressor(kNoCompression),
+      db_options_.statistics.get(), &event_logger, true,
+      true /* sync_output_directory */, true /* write_manifest */,
       Env::Priority::USER, nullptr /*IOTracer*/, empty_seqno_to_time_mapping_);
 
   HistogramData hist;
@@ -326,8 +328,9 @@ TEST_F(FlushJobTest, FlushMemTablesSingleColumnFamily) {
       *cfd->GetLatestMutableCFOptions(), flush_memtable_id, env_options_,
       versions_.get(), &mutex_, &shutting_down_, {}, kMaxSequenceNumber,
       snapshot_checker, &job_context, FlushReason::kTest, nullptr, nullptr,
-      nullptr, kNoCompression, db_options_.statistics.get(), &event_logger,
-      true, true /* sync_output_directory */, true /* write_manifest */,
+      nullptr, BuiltinCompressor::GetCompressor(kNoCompression),
+      db_options_.statistics.get(), &event_logger, true,
+      true /* sync_output_directory */, true /* write_manifest */,
       Env::Priority::USER, nullptr /*IOTracer*/, empty_seqno_to_time_mapping_);
   HistogramData hist;
   FileMetaData file_meta;
@@ -399,7 +402,8 @@ TEST_F(FlushJobTest, FlushMemtablesMultipleColumnFamilies) {
         memtable_ids[k], env_options_, versions_.get(), &mutex_,
         &shutting_down_, snapshot_seqs, kMaxSequenceNumber, snapshot_checker,
         &job_context, FlushReason::kTest, nullptr, nullptr, nullptr,
-        kNoCompression, db_options_.statistics.get(), &event_logger, true,
+        BuiltinCompressor::GetCompressor(kNoCompression),
+        db_options_.statistics.get(), &event_logger, true,
         false /* sync_output_directory */, false /* write_manifest */,
         Env::Priority::USER, nullptr /*IOTracer*/,
         empty_seqno_to_time_mapping_));
@@ -527,8 +531,9 @@ TEST_F(FlushJobTest, Snapshots) {
       std::numeric_limits<uint64_t>::max() /* memtable_id */, env_options_,
       versions_.get(), &mutex_, &shutting_down_, snapshots, kMaxSequenceNumber,
       snapshot_checker, &job_context, FlushReason::kTest, nullptr, nullptr,
-      nullptr, kNoCompression, db_options_.statistics.get(), &event_logger,
-      true, true /* sync_output_directory */, true /* write_manifest */,
+      nullptr, BuiltinCompressor::GetCompressor(kNoCompression),
+      db_options_.statistics.get(), &event_logger, true,
+      true /* sync_output_directory */, true /* write_manifest */,
       Env::Priority::USER, nullptr /*IOTracer*/, empty_seqno_to_time_mapping_);
   mutex_.Lock();
   flush_job.PickMemTable();
@@ -583,8 +588,9 @@ TEST_F(FlushJobTest, GetRateLimiterPriorityForWrite) {
       *cfd->GetLatestMutableCFOptions(), flush_memtable_id, env_options_,
       versions_.get(), &mutex_, &shutting_down_, {}, kMaxSequenceNumber,
       snapshot_checker, &job_context, FlushReason::kTest, nullptr, nullptr,
-      nullptr, kNoCompression, db_options_.statistics.get(), &event_logger,
-      true, true /* sync_output_directory */, true /* write_manifest */,
+      nullptr, BuiltinCompressor::GetCompressor(kNoCompression),
+      db_options_.statistics.get(), &event_logger, true,
+      true /* sync_output_directory */, true /* write_manifest */,
       Env::Priority::USER, nullptr /*IOTracer*/, empty_seqno_to_time_mapping_);
 
   // When the state from WriteController is normal.
@@ -697,8 +703,9 @@ TEST_P(FlushJobTimestampTest, AllKeysExpired) {
       std::numeric_limits<uint64_t>::max() /* memtable_id */, env_options_,
       versions_.get(), &mutex_, &shutting_down_, snapshots, kMaxSequenceNumber,
       snapshot_checker, &job_context, FlushReason::kTest, nullptr, nullptr,
-      nullptr, kNoCompression, db_options_.statistics.get(), &event_logger,
-      true, true /* sync_output_directory */, true /* write_manifest */,
+      nullptr, BuiltinCompressor::GetCompressor(kNoCompression),
+      db_options_.statistics.get(), &event_logger, true,
+      true /* sync_output_directory */, true /* write_manifest */,
       Env::Priority::USER, nullptr /*IOTracer*/, empty_seqno_to_time_mapping_,
       /*db_id=*/"",
       /*db_session_id=*/"", full_history_ts_low);
@@ -759,8 +766,9 @@ TEST_P(FlushJobTimestampTest, NoKeyExpired) {
       std::numeric_limits<uint64_t>::max() /* memtable_id */, env_options_,
       versions_.get(), &mutex_, &shutting_down_, snapshots, kMaxSequenceNumber,
       snapshot_checker, &job_context, FlushReason::kTest, nullptr, nullptr,
-      nullptr, kNoCompression, db_options_.statistics.get(), &event_logger,
-      true, true /* sync_output_directory */, true /* write_manifest */,
+      nullptr, BuiltinCompressor::GetCompressor(kNoCompression),
+      db_options_.statistics.get(), &event_logger, true,
+      true /* sync_output_directory */, true /* write_manifest */,
       Env::Priority::USER, nullptr /*IOTracer*/, empty_seqno_to_time_mapping_,
       /*db_id=*/"",
       /*db_session_id=*/"", full_history_ts_low);
