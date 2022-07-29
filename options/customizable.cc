@@ -15,6 +15,22 @@
 #include "util/string_util.h"
 
 namespace ROCKSDB_NAMESPACE {
+namespace {
+// Splits an IndividualId into its three components (name@addr#pid).
+// Returns true if the input id had all components and false otherwise.
+static bool IsIndividualId(const std::string& id, size_t* addr,
+                           size_t* pid = nullptr) {
+  auto hoff = std::string::npos;
+  *addr = id.find("@");
+  if (*addr != std::string::npos) {
+    hoff = id.find("#", *addr);
+  }
+  if (pid != nullptr) {
+    *pid = hoff;
+  }
+  return hoff != std::string::npos;
+}
+}  // namespace
 
 std::string Customizable::GetOptionName(const std::string& long_name) const {
   const std::string& name = Name();
@@ -70,6 +86,28 @@ std::string Customizable::SerializeOptions(const ConfigOptions& config_options,
 
 #endif  // ROCKSDB_LITE
 
+// Returns true if that_id is equivalent to this_id
+bool Customizable::IdsAreEquivalent(const std::string& that_id) const {
+  const auto& id = GetId();
+  if (that_id == id) {
+    return true;
+  } else {
+    // Check if this or that ID is an IndividualId.  If so, ignore the
+    // "individual" part and re-compare
+    size_t ipos, tpos;
+    bool this_iid = IsIndividualId(id, &ipos);
+    bool that_iid = IsIndividualId(that_id, &tpos);
+    if (this_iid && that_iid) {
+      return id.compare(0, ipos, that_id, 0, tpos) == 0;
+    } else if (that_iid) {
+      return that_id.compare(0, tpos, id) == 0;
+    } else if (this_iid) {
+      return id.compare(0, ipos, that_id) == 0;
+    }
+    return false;
+  }
+}
+
 bool Customizable::AreEquivalent(const ConfigOptions& config_options,
                                  const Configurable* other,
                                  std::string* mismatch) const {
@@ -78,7 +116,7 @@ bool Customizable::AreEquivalent(const ConfigOptions& config_options,
     const Customizable* custom = reinterpret_cast<const Customizable*>(other);
     if (custom == nullptr) {  // Cast failed
       return false;
-    } else if (GetId() != custom->GetId()) {
+    } else if (!IdsAreEquivalent(custom->GetId())) {
       *mismatch = OptionTypeInfo::kIdPropName();
       return false;
     } else if (config_options.sanity_level >

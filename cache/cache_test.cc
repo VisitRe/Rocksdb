@@ -19,6 +19,7 @@
 #include "cache/fast_lru_cache.h"
 #include "cache/lru_cache.h"
 #include "port/stack_trace.h"
+#include "rocksdb/convenience.h"
 #include "test_util/testharness.h"
 #include "util/coding.h"
 #include "util/string_util.h"
@@ -990,9 +991,119 @@ TEST_P(CacheTest, GetChargeAndDeleter) {
   cache_->Release(h1);
 }
 
-std::shared_ptr<Cache> (*new_clock_cache_func)(size_t, size_t, int, bool,
-                                               CacheMetadataChargePolicy) =
-    ExperimentalNewClockCache;
+class CreateCacheTest : public testing::Test {
+ public:
+  CreateCacheTest() {
+    config_options_.ignore_unsupported_options = false;
+    config_options_.invoke_prepare_options = false;
+  }
+
+ protected:
+  ConfigOptions config_options_;
+};
+
+TEST_F(CreateCacheTest, LRUFromSize) {
+  std::shared_ptr<Cache> cache;
+  Options options;
+  ASSERT_OK(Cache::CreateFromString(config_options_, "1M", &cache));
+  ASSERT_NE(cache, nullptr);
+  ASSERT_STREQ(cache->Name(), lru_cache::LRUCache::kClassName());
+  ASSERT_EQ(cache->GetCapacity(), 1024U * 1024U);
+  ASSERT_OK(cache->ValidateOptions(options, options));
+}
+
+TEST_F(CreateCacheTest, LRUFromOptions) {
+  std::shared_ptr<Cache> cache, copy;
+  Options options;
+  Status s =
+      Cache::CreateFromString(config_options_,
+                              "capacity=1M;num_shard_bits=5;strict_capacity_"
+                              "limit=true; metadata_charge_policy=kDontCharge",
+                              &cache);
+#ifndef ROCKSDB_LITE
+  ASSERT_OK(s);
+  ASSERT_NE(cache, nullptr);
+  ASSERT_STREQ(cache->Name(), lru_cache::LRUCache::kClassName());
+  ASSERT_EQ(cache->GetCapacity(), 1024U * 1024U);
+  ASSERT_NOK(cache->ValidateOptions(options, options));  // Not prepared
+  ASSERT_OK(cache->PrepareOptions(config_options_));     // Prepare it
+  ASSERT_OK(cache->ValidateOptions(options, options));   // Prepared, all good
+  config_options_.invoke_prepare_options = true;
+  ASSERT_OK(Cache::CreateFromString(config_options_,
+                                    cache->ToString(config_options_), &copy));
+  ASSERT_NE(copy, nullptr);
+  ASSERT_STREQ(copy->Name(), lru_cache::LRUCache::kClassName());
+  std::string mismatch;
+  ASSERT_TRUE(cache->AreEquivalent(config_options_, copy.get(), &mismatch));
+  ASSERT_OK(copy->ValidateOptions(options, options));
+#else
+  ASSERT_NOK(s);
+#endif  // ROCKSDB_LITE
+}
+
+TEST_F(CreateCacheTest, ClockCache) {
+  std::shared_ptr<Cache> cache, copy;
+  Options options;
+  std::string id = clock_cache::ClockCache::kClassName();
+  Status s = Cache::CreateFromString(config_options_, id, &cache);
+#ifndef ROCKSDB_LITE
+  ASSERT_OK(s);
+  ASSERT_NE(cache, nullptr);
+  ASSERT_EQ(id, cache->Name());
+  ASSERT_NOK(cache->ValidateOptions(options, options));
+  cache->SetCapacity(1024U * 1024U);
+  ASSERT_EQ(cache->GetCapacity(), 1024U * 1024U);
+
+  ASSERT_OK(cache->PrepareOptions(config_options_));
+  ASSERT_OK(cache->ValidateOptions(options, options));
+
+  // cache->SetCapacity(1024U * 1024U); Currently ClockCache does not support
+  // SetCapacity
+  ASSERT_EQ(cache->GetCapacity(), 1024U * 1024U);
+
+  config_options_.invoke_prepare_options = true;
+  ASSERT_OK(Cache::CreateFromString(config_options_,
+                                    cache->ToString(config_options_), &copy));
+  ASSERT_NE(copy, nullptr);
+  ASSERT_STREQ(copy->Name(), clock_cache::ClockCache::kClassName());
+  std::string mismatch;
+  ASSERT_TRUE(cache->AreEquivalent(config_options_, copy.get(), &mismatch));
+  ASSERT_OK(copy->ValidateOptions(options, options));
+#else
+  ASSERT_NOK(s);
+#endif  // ROCKSDB_LITE
+}
+
+#ifndef ROCKSDB_LITE
+TEST_F(CreateCacheTest, LRUFromBadOptions) {
+  std::shared_ptr<Cache> cache;
+
+  ASSERT_NOK(Cache::CreateFromString(
+      config_options_, "capacityXX=1M; metadata_charge_policy=kDontCharge",
+      &cache));
+  ASSERT_NOK(Cache::CreateFromString(config_options_,
+                                     "metadata_charge_policy=kXX", &cache));
+  config_options_.invoke_prepare_options = true;
+  ASSERT_NOK(
+      Cache::CreateFromString(config_options_, "num_shard_bits=21", &cache));
+}
+
+TEST_F(CreateCacheTest, ClockCacheFromBadOptions) {
+  std::shared_ptr<Cache> cache;
+  std::string id = clock_cache::ClockCache::kClassName();
+  ASSERT_NOK(Cache::CreateFromString(
+      config_options_,
+      "capacityXX=1M; metadata_charge_policy=kDontCharge;id=" + id, &cache));
+  ASSERT_NOK(Cache::CreateFromString(
+      config_options_, "metadata_charge_policy=kXX; id=" + id, &cache));
+
+  config_options_.invoke_prepare_options = true;
+  ASSERT_NOK(Cache::CreateFromString(config_options_,
+                                     "num_shard_bits=21;id=" + id, &cache));
+}
+
+#endif  // ROCKSDB_LITE
+
 INSTANTIATE_TEST_CASE_P(CacheTestInstance, CacheTest,
                         testing::Values(kLRU, kClock, kFast));
 INSTANTIATE_TEST_CASE_P(CacheTestInstance, LRUCacheTest,

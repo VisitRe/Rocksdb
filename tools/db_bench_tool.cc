@@ -573,7 +573,7 @@ DEFINE_double(cache_high_pri_pool_ratio, 0.0,
 DEFINE_double(cache_low_pri_pool_ratio, 1.0,
               "Ratio of block cache reserve for low pri blocks.");
 
-DEFINE_string(cache_type, "lru_cache", "Type of block cache.");
+DEFINE_string(cache_uri, "lru_cache", "Type of block cache.");
 
 DEFINE_bool(use_compressed_secondary_cache, false,
             "Use the CompressedSecondaryCache as the secondary cache.");
@@ -2992,10 +2992,13 @@ class Benchmark {
   };
 
   std::shared_ptr<Cache> NewCache(int64_t capacity) {
+    ConfigOptions config_options;
+    config_options.ignore_unknown_options = false;
+    config_options.ignore_unsupported_options = false;
     if (capacity <= 0) {
       return nullptr;
     }
-    if (FLAGS_cache_type == "clock_cache") {
+    if (FLAGS_cache_uri == "clock_cache") {
       auto cache = ExperimentalNewClockCache(
           static_cast<size_t>(capacity), FLAGS_block_size,
           FLAGS_cache_numshardbits, false /*strict_capacity_limit*/,
@@ -3005,12 +3008,12 @@ class Benchmark {
         exit(1);
       }
       return cache;
-    } else if (FLAGS_cache_type == "fast_lru_cache") {
+    } else if (FLAGS_cache_uri == "fast_lru_cache") {
       return NewFastLRUCache(static_cast<size_t>(capacity), FLAGS_block_size,
                              FLAGS_cache_numshardbits,
                              false /*strict_capacity_limit*/,
                              kDefaultCacheMetadataChargePolicy);
-    } else if (FLAGS_cache_type == "lru_cache") {
+    } else if (FLAGS_cache_uri == "lru_cache") {
       LRUCacheOptions opts(
           static_cast<size_t>(capacity), FLAGS_cache_numshardbits,
           false /*strict_capacity_limit*/, FLAGS_cache_high_pri_pool_ratio,
@@ -3032,7 +3035,7 @@ class Benchmark {
 #ifndef ROCKSDB_LITE
       if (!FLAGS_secondary_cache_uri.empty()) {
         Status s = SecondaryCache::CreateFromString(
-            ConfigOptions(), FLAGS_secondary_cache_uri, &secondary_cache);
+            config_options, FLAGS_secondary_cache_uri, &secondary_cache);
         if (secondary_cache == nullptr) {
           fprintf(
               stderr,
@@ -3063,8 +3066,16 @@ class Benchmark {
 
       return NewLRUCache(opts);
     } else {
-      fprintf(stderr, "Cache type not supported.");
-      exit(1);
+      std::shared_ptr<Cache> cache;
+      Status s =
+          Cache::CreateFromString(config_options, FLAGS_cache_uri, &cache);
+      if (!s.ok() || cache == nullptr) {
+        fprintf(stderr, "Could not create Cache for [%s] status=%s\n",
+                FLAGS_cache_uri.c_str(), s.ToString().c_str());
+        exit(1);
+      } else {
+        return cache;
+      }
     }
   }
 

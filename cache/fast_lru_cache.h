@@ -440,18 +440,68 @@ class ALIGN_AS(CACHE_LINE_SIZE) LRUCacheShard final : public CacheShard {
   mutable DMutex mutex_;
 };
 
+struct FastLRUCacheOptions {
+  static const char* kName() { return "FastLRUCacheOptions"; }
+
+  // Capacity of the cache.
+  size_t capacity = 0;
+
+  // Cache is sharded into 2^num_shard_bits shards, by hash of key.
+  // Refer to NewLRUCache for further information.
+  int num_shard_bits = -1;
+
+  size_t estimated_value_size;
+
+  // If strict_capacity_limit is set,
+  // insert to the cache will fail when cache is full.
+  bool strict_capacity_limit = false;
+
+  // If non-nullptr will use this allocator instead of system allocator when
+  // allocating memory for cache blocks. Call this method before you start using
+  // the cache!
+  //
+  // Caveat: when the cache is used as block cache, the memory allocator is
+  // ignored when dealing with compression libraries that allocate memory
+  // internally (currently only XPRESS).
+  std::shared_ptr<MemoryAllocator> memory_allocator;
+
+  CacheMetadataChargePolicy metadata_charge_policy =
+      kDefaultCacheMetadataChargePolicy;
+
+  FastLRUCacheOptions() {}
+  FastLRUCacheOptions(
+      size_t _capacity, int _num_shard_bits, size_t _estimated_value_size,
+      bool _strict_capacity_limit,
+      std::shared_ptr<MemoryAllocator> _memory_allocator = nullptr,
+      CacheMetadataChargePolicy _metadata_charge_policy =
+          kDefaultCacheMetadataChargePolicy)
+      : capacity(_capacity),
+        num_shard_bits(_num_shard_bits),
+        estimated_value_size(_estimated_value_size),
+        strict_capacity_limit(_strict_capacity_limit),
+        memory_allocator(std::move(_memory_allocator)),
+        metadata_charge_policy(_metadata_charge_policy) {}
+};
+
 class LRUCache
 #ifdef NDEBUG
     final
 #endif
     : public ShardedCache {
  public:
-  LRUCache(size_t capacity, size_t estimated_value_size, int num_shard_bits,
-           bool strict_capacity_limit,
-           CacheMetadataChargePolicy metadata_charge_policy =
-               kDontChargeCacheMetadata);
+  explicit LRUCache();
+  explicit LRUCache(const FastLRUCacheOptions& options);
   ~LRUCache() override;
-  const char* Name() const override { return "LRUCache"; }
+  static const char* kClassName() { return "FastLRUCache"; }
+  const char* Name() const override { return kClassName(); }
+  Status PrepareOptions(const ConfigOptions& config_options) override;
+  bool IsMutable() const override;
+  std::string GetPrintableOptions() const override;
+  void SetCapacity(size_t capacity) override;
+  void SetStrictCapacityLimit(bool strict_capacity_limit) override;
+  size_t GetCapacity() const override;
+  bool HasStrictCapacityLimit() const override;
+
   CacheShard* GetShard(uint32_t shard) override;
   const CacheShard* GetShard(uint32_t shard) const override;
   void* Value(Handle* handle) override;
@@ -462,7 +512,7 @@ class LRUCache
 
  private:
   LRUCacheShard* shards_ = nullptr;
-  int num_shards_ = 0;
+  FastLRUCacheOptions options_;
 };
 }  // namespace fast_lru_cache
 

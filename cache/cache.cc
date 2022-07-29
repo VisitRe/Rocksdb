@@ -9,14 +9,71 @@
 
 #include "rocksdb/cache.h"
 
+#include "cache/clock_cache.h"
+#include "cache/fast_lru_cache.h"
 #include "cache/lru_cache.h"
+#include "rocksdb/configurable.h"
 #include "rocksdb/secondary_cache.h"
 #include "rocksdb/utilities/customizable_util.h"
 #include "rocksdb/utilities/options_type.h"
 #include "util/string_util.h"
 
 namespace ROCKSDB_NAMESPACE {
+namespace {
 #ifndef ROCKSDB_LITE
+int RegisterBuiltinCache(ObjectLibrary& library, const std::string& /*arg*/) {
+  library.AddFactory<Cache>(
+      lru_cache::LRUCache::kClassName(),
+      [](const std::string& /*uri*/, std::unique_ptr<Cache>* guard,
+         std::string* /* errmsg */) {
+        *guard = std::make_unique<lru_cache::LRUCache>();
+        return guard->get();
+      });
+  library.AddFactory<Cache>(
+      fast_lru_cache::LRUCache::kClassName(),
+      [](const std::string& /*uri*/, std::unique_ptr<Cache>* guard,
+         std::string* /* errmsg */) {
+        *guard = std::make_unique<fast_lru_cache::LRUCache>();
+        return guard->get();
+      });
+  library.AddFactory<Cache>(
+      clock_cache::ClockCache::kClassName(),
+      [](const std::string& /*uri*/, std::unique_ptr<Cache>* guard,
+         std::string* /*errmsg*/) {
+        *guard = std::make_unique<clock_cache::ClockCache>();
+        return guard->get();
+      });
+  //** Register AsIndividualId for the moment to pass the tests
+  // If the Cache is made to create as a ManagedObject, these factories
+  // may not be necessary as the ManagedObject code should handle it.
+  library.AddFactory<Cache>(
+      ObjectLibrary::PatternEntry::AsIndividualId(
+          lru_cache::LRUCache::kClassName()),
+      [](const std::string& /*uri*/, std::unique_ptr<Cache>* guard,
+         std::string* /* errmsg */) {
+        *guard = std::make_unique<lru_cache::LRUCache>();
+        return guard->get();
+      });
+  library.AddFactory<Cache>(
+      ObjectLibrary::PatternEntry::AsIndividualId(
+          fast_lru_cache::LRUCache::kClassName()),
+      [](const std::string& /*uri*/, std::unique_ptr<Cache>* guard,
+         std::string* /* errmsg */) {
+        *guard = std::make_unique<fast_lru_cache::LRUCache>();
+        return guard->get();
+      });
+  library.AddFactory<Cache>(
+      ObjectLibrary::PatternEntry::AsIndividualId(
+          clock_cache::ClockCache::kClassName()),
+      [](const std::string& /*uri*/, std::unique_ptr<Cache>* guard,
+         std::string* /*errmsg*/) {
+        *guard = std::make_unique<clock_cache::ClockCache>();
+        return guard->get();
+      });
+  size_t num_types;
+  return static_cast<int>(library.GetFactoryCount(&num_types));
+}
+
 static std::unordered_map<std::string, OptionTypeInfo>
     lru_cache_options_type_info = {
         {"capacity",
@@ -60,6 +117,7 @@ static std::unordered_map<std::string, OptionTypeInfo>
           OptionTypeFlags::kMutable}},
 };
 #endif  // ROCKSDB_LITE
+}  // namespace
 
 Status SecondaryCache::CreateFromString(
     const ConfigOptions& config_options, const std::string& value,
@@ -98,23 +156,27 @@ Status SecondaryCache::CreateFromString(
 Status Cache::CreateFromString(const ConfigOptions& config_options,
                                const std::string& value,
                                std::shared_ptr<Cache>* result) {
+#ifndef ROCKSDB_LITE
+  static std::once_flag once;
+  std::call_once(
+      once, [&]() { RegisterBuiltinCache(*(ObjectLibrary::Default()), ""); });
+#endif  // ROCKSDB_LITE
   Status status;
   std::shared_ptr<Cache> cache;
-  if (value.find('=') == std::string::npos) {
-    cache = NewLRUCache(ParseSizeT(value));
-  } else {
-#ifndef ROCKSDB_LITE
-    LRUCacheOptions cache_opts;
-    status = OptionTypeInfo::ParseStruct(config_options, "",
-                                         &lru_cache_options_type_info, "",
-                                         value, &cache_opts);
-    if (status.ok()) {
-      cache = NewLRUCache(cache_opts);
+  if (!value.empty()) {
+    std::string id;
+    std::unordered_map<std::string, std::string> opt_map;
+    status = Configurable::GetOptionsMap(value, LRUCache::kClassName(), &id,
+                                         &opt_map);
+    if (!status.ok()) {
+      return status;
+    } else if (opt_map.empty() && !id.empty() && isdigit(id.at(0))) {
+      // If there are no name=value options and the id is a digit, assume
+      // it is an old-style LRUCache created by capacity only
+      cache = NewLRUCache(ParseSizeT(id));
+    } else {
+      status = NewSharedObject<Cache>(config_options, id, opt_map, &cache);
     }
-#else
-    (void)config_options;
-    status = Status::NotSupported("Cannot load cache in LITE mode ", value);
-#endif  //! ROCKSDB_LITE
   }
   if (status.ok()) {
     result->swap(cache);

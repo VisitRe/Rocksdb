@@ -1706,22 +1706,14 @@ TEST_F(DBSecondaryCacheTest, TestSecondaryCacheMultiGet) {
 
 class LRUCacheWithStat : public LRUCache {
  public:
-  LRUCacheWithStat(
-      size_t _capacity, int _num_shard_bits, bool _strict_capacity_limit,
-      double _high_pri_pool_ratio, double _low_pri_pool_ratio,
-      std::shared_ptr<MemoryAllocator> _memory_allocator = nullptr,
-      bool _use_adaptive_mutex = kDefaultToAdaptiveMutex,
-      CacheMetadataChargePolicy _metadata_charge_policy =
-          kDontChargeCacheMetadata,
-      const std::shared_ptr<SecondaryCache>& _secondary_cache = nullptr)
-      : LRUCache(_capacity, _num_shard_bits, _strict_capacity_limit,
-                 _high_pri_pool_ratio, _low_pri_pool_ratio, _memory_allocator,
-                 _use_adaptive_mutex, _metadata_charge_policy,
-                 _secondary_cache) {
+  LRUCacheWithStat(const LRUCacheOptions& cache_opts) : LRUCache(cache_opts) {
     insert_count_ = 0;
     lookup_count_ = 0;
+    EXPECT_OK(PrepareOptions(ConfigOptions()));
   }
   ~LRUCacheWithStat() {}
+  static const char* kClassName() { return "LRUCacheWithStat"; }
+  virtual const char* Name() const override { return kClassName(); }
 
   Status Insert(const Slice& key, void* value, size_t charge, DeleterFn deleter,
                 Handle** handle, Priority priority) override {
@@ -1765,12 +1757,7 @@ TEST_F(DBSecondaryCacheTest, LRUCacheDumpLoadBasic) {
       false /* strict_capacity_limit */, 0.5 /* high_pri_pool_ratio */,
       nullptr /* memory_allocator */, kDefaultToAdaptiveMutex,
       kDontChargeCacheMetadata, 0.5 /* low_pri_pool_ratio */);
-  LRUCacheWithStat* tmp_cache = new LRUCacheWithStat(
-      cache_opts.capacity, cache_opts.num_shard_bits,
-      cache_opts.strict_capacity_limit, cache_opts.high_pri_pool_ratio,
-      cache_opts.low_pri_pool_ratio, cache_opts.memory_allocator,
-      cache_opts.use_adaptive_mutex, cache_opts.metadata_charge_policy,
-      cache_opts.secondary_cache);
+  LRUCacheWithStat* tmp_cache = new LRUCacheWithStat(cache_opts);
   std::shared_ptr<Cache> cache(tmp_cache);
   BlockBasedTableOptions table_options;
   table_options.block_cache = cache;
@@ -1838,12 +1825,7 @@ TEST_F(DBSecondaryCacheTest, LRUCacheDumpLoadBasic) {
   std::shared_ptr<TestSecondaryCache> secondary_cache =
       std::make_shared<TestSecondaryCache>(2048 * 1024);
   cache_opts.secondary_cache = secondary_cache;
-  tmp_cache = new LRUCacheWithStat(
-      cache_opts.capacity, cache_opts.num_shard_bits,
-      cache_opts.strict_capacity_limit, cache_opts.high_pri_pool_ratio,
-      cache_opts.low_pri_pool_ratio, cache_opts.memory_allocator,
-      cache_opts.use_adaptive_mutex, cache_opts.metadata_charge_policy,
-      cache_opts.secondary_cache);
+  tmp_cache = new LRUCacheWithStat(cache_opts);
   std::shared_ptr<Cache> cache_new(tmp_cache);
   table_options.block_cache = cache_new;
   table_options.block_size = 4 * 1024;
@@ -1905,12 +1887,7 @@ TEST_F(DBSecondaryCacheTest, LRUCacheDumpLoadWithFilter) {
       false /* strict_capacity_limit */, 0.5 /* high_pri_pool_ratio */,
       nullptr /* memory_allocator */, kDefaultToAdaptiveMutex,
       kDontChargeCacheMetadata, 0.5 /* low_pri_pool_ratio */);
-  LRUCacheWithStat* tmp_cache = new LRUCacheWithStat(
-      cache_opts.capacity, cache_opts.num_shard_bits,
-      cache_opts.strict_capacity_limit, cache_opts.high_pri_pool_ratio,
-      cache_opts.low_pri_pool_ratio, cache_opts.memory_allocator,
-      cache_opts.use_adaptive_mutex, cache_opts.metadata_charge_policy,
-      cache_opts.secondary_cache);
+  LRUCacheWithStat* tmp_cache = new LRUCacheWithStat(cache_opts);
   std::shared_ptr<Cache> cache(tmp_cache);
   BlockBasedTableOptions table_options;
   table_options.block_cache = cache;
@@ -2005,12 +1982,7 @@ TEST_F(DBSecondaryCacheTest, LRUCacheDumpLoadWithFilter) {
   std::shared_ptr<TestSecondaryCache> secondary_cache =
       std::make_shared<TestSecondaryCache>(2048 * 1024);
   cache_opts.secondary_cache = secondary_cache;
-  tmp_cache = new LRUCacheWithStat(
-      cache_opts.capacity, cache_opts.num_shard_bits,
-      cache_opts.strict_capacity_limit, cache_opts.high_pri_pool_ratio,
-      cache_opts.low_pri_pool_ratio, cache_opts.memory_allocator,
-      cache_opts.use_adaptive_mutex, cache_opts.metadata_charge_policy,
-      cache_opts.secondary_cache);
+  tmp_cache = new LRUCacheWithStat(cache_opts);
   std::shared_ptr<Cache> cache_new(tmp_cache);
   table_options.block_cache = cache_new;
   table_options.block_size = 4 * 1024;
