@@ -100,8 +100,13 @@ Status Cache::CreateFromString(const ConfigOptions& config_options,
                                std::shared_ptr<Cache>* result) {
   Status status;
   std::shared_ptr<Cache> cache;
-  if (value.find('=') == std::string::npos) {
-    cache = NewLRUCache(ParseSizeT(value));
+  if (StartsWith(value, "null")) {
+    cache = nullptr;
+  } else if (value.find('=') == std::string::npos) {
+    size_t capacity = ParseSizeT(value);
+    if (capacity > 0) {
+      cache = NewLRUCache(capacity);
+    }
   } else {
 #ifndef ROCKSDB_LITE
     LRUCacheOptions cache_opts;
