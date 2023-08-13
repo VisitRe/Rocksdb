@@ -44,7 +44,7 @@ SstFileDumper::SstFileDumper(const Options& options,
                              Temperature file_temp, size_t readahead_size,
                              bool verify_checksum, bool output_hex,
                              bool decode_blob_index, const EnvOptions& soptions,
-                             bool silent)
+                             bool silent, FILE* out, FILE* err)
     : file_name_(file_path),
       read_num_(0),
       file_temp_(file_temp),
@@ -56,10 +56,13 @@ SstFileDumper::SstFileDumper(const Options& options,
       ioptions_(options_),
       moptions_(ColumnFamilyOptions(options_)),
       read_options_(verify_checksum, false),
-      internal_comparator_(BytewiseComparator()) {
+      internal_comparator_(BytewiseComparator()),
+      out_(out),
+      err_(err)
+      {
   read_options_.readahead_size = readahead_size;
   if (!silent_) {
-    fprintf(stdout, "Process %s\n", file_path.c_str());
+    fprintf(out, "Process %s\n", file_path.c_str());
   }
   init_result_ = GetTableReader(file_name_);
 }
@@ -260,17 +263,17 @@ Status SstFileDumper::ShowAllCompressionSizes(
     int32_t compress_level_from, int32_t compress_level_to,
     uint32_t max_dict_bytes, uint32_t zstd_max_train_bytes,
     uint64_t max_dict_buffer_bytes, bool use_zstd_dict_trainer) {
-  fprintf(stdout, "Block Size: %" ROCKSDB_PRIszt "\n", block_size);
+  fprintf(out_, "Block Size: %" ROCKSDB_PRIszt "\n", block_size);
   for (auto& i : compression_types) {
     if (CompressionTypeSupported(i.first)) {
-      fprintf(stdout, "Compression: %-24s\n", i.second);
+      fprintf(out_, "Compression: %-24s\n", i.second);
       CompressionOptions compress_opt;
       compress_opt.max_dict_bytes = max_dict_bytes;
       compress_opt.zstd_max_train_bytes = zstd_max_train_bytes;
       compress_opt.max_dict_buffer_bytes = max_dict_buffer_bytes;
       compress_opt.use_zstd_dict_trainer = use_zstd_dict_trainer;
       for (int32_t j = compress_level_from; j <= compress_level_to; j++) {
-        fprintf(stdout, "Compression level: %d", j);
+        fprintf(out_, "Compression level: %d", j);
         compress_opt.level = j;
         Status s = ShowCompressionSize(block_size, i.first, compress_opt);
         if (!s.ok()) {
@@ -278,7 +281,7 @@ Status SstFileDumper::ShowAllCompressionSizes(
         }
       }
     } else {
-      fprintf(stdout, "Unsupported compression type: %s.\n", i.second);
+      fprintf(out_, "Unsupported compression type: %s.\n", i.second);
     }
   }
   return Status::OK();
@@ -314,9 +317,9 @@ Status SstFileDumper::ShowCompressionSize(
   }
 
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-  fprintf(stdout, " Size: %10" PRIu64, file_size);
-  fprintf(stdout, " Blocks: %6" PRIu64, num_data_blocks);
-  fprintf(stdout, " Time Taken: %10s microsecs",
+  fprintf(out_, " Size: %10" PRIu64, file_size);
+  fprintf(out_, " Blocks: %6" PRIu64, num_data_blocks);
+  fprintf(out_, " Time Taken: %10s microsecs",
           std::to_string(
               std::chrono::duration_cast<std::chrono::microseconds>(end - start)
                   .count())
@@ -350,11 +353,11 @@ Status SstFileDumper::ShowCompressionSize(
                              : ((static_cast<double>(not_compressed_blocks) /
                                  static_cast<double>(num_data_blocks)) *
                                 100.0);
-  fprintf(stdout, " Compressed: %6" PRIu64 " (%5.1f%%)", compressed_blocks,
+  fprintf(out_, " Compressed: %6" PRIu64 " (%5.1f%%)", compressed_blocks,
           compressed_pcnt);
-  fprintf(stdout, " Not compressed (ratio): %6" PRIu64 " (%5.1f%%)",
+  fprintf(out_, " Not compressed (ratio): %6" PRIu64 " (%5.1f%%)",
           ratio_not_compressed_blocks, ratio_not_compressed_pcnt);
-  fprintf(stdout, " Not compressed (abort): %6" PRIu64 " (%5.1f%%)\n",
+  fprintf(out_, " Not compressed (abort): %6" PRIu64 " (%5.1f%%)\n",
           not_compressed_blocks, not_compressed_pcnt);
   return Status::OK();
 }
@@ -373,7 +376,7 @@ Status SstFileDumper::ReadTableProperties(uint64_t table_magic_number,
       /* memory_allocator= */ nullptr, prefetch_buffer);
   if (!s.ok()) {
     if (!silent_) {
-      fprintf(stdout, "Not able to read table properties\n");
+      fprintf(out_, "Not able to read table properties\n");
     }
   }
   return s;
@@ -393,7 +396,7 @@ Status SstFileDumper::SetTableOptionsByMagicNumber(
 
     options_.table_factory.reset(bbtf);
     if (!silent_) {
-      fprintf(stdout, "Sst file format: block-based\n");
+      fprintf(out_, "Sst file format: block-based\n");
     }
 
     auto& props = table_properties_->user_collected_properties;
@@ -421,7 +424,7 @@ Status SstFileDumper::SetTableOptionsByMagicNumber(
 
     options_.table_factory.reset(NewPlainTableFactory(plain_table_options));
     if (!silent_) {
-      fprintf(stdout, "Sst file format: plain table\n");
+      fprintf(out_, "Sst file format: plain table\n");
     }
   } else {
     char error_msg_buffer[80];
@@ -438,7 +441,7 @@ Status SstFileDumper::SetOldTableOptions() {
   assert(table_properties_ == nullptr);
   options_.table_factory = std::make_shared<BlockBasedTableFactory>();
   if (!silent_) {
-    fprintf(stdout, "Sst file format: block-based(old version)\n");
+    fprintf(out_, "Sst file format: block-based(old version)\n");
   }
 
   return Status::OK();
@@ -489,7 +492,7 @@ Status SstFileDumper::ReadSequential(bool print_kv, uint64_t read_num,
 
     if (print_kv) {
       if (!decode_blob_index_ || ikey.type != kTypeBlobIndex) {
-        fprintf(stdout, "%s => %s\n",
+        fprintf(out_, "%s => %s\n",
                 ikey.DebugString(true, output_hex_).c_str(),
                 value.ToString(output_hex_).c_str());
       } else {
@@ -497,12 +500,12 @@ Status SstFileDumper::ReadSequential(bool print_kv, uint64_t read_num,
 
         const Status s = blob_index.DecodeFrom(value);
         if (!s.ok()) {
-          fprintf(stderr, "%s => error decoding blob index\n",
+          fprintf(err_, "%s => error decoding blob index\n",
                   ikey.DebugString(true, output_hex_).c_str());
           continue;
         }
 
-        fprintf(stdout, "%s => %s\n",
+        fprintf(out_, "%s => %s\n",
                 ikey.DebugString(true, output_hex_).c_str(),
                 blob_index.DebugString(output_hex_).c_str());
       }
