@@ -12,6 +12,7 @@
 #include "db/wide/wide_column_serialization.h"
 #include "file/random_access_file_reader.h"
 #include "port/stack_trace.h"
+#include "rocksdb/compressor.h"
 #include "rocksdb/convenience.h"
 #include "rocksdb/filter_policy.h"
 #include "rocksdb/sst_dump_tool.h"
@@ -129,8 +130,8 @@ class SSTDumpToolTest : public testing::Test {
     tb.reset(opts.table_factory->NewTableBuilder(
         TableBuilderOptions(
             imoptions, moptions, read_options, write_options, ikc,
-            &int_tbl_prop_collector_factories, CompressionType::kNoCompression,
-            CompressionOptions(),
+            &int_tbl_prop_collector_factories,
+            BuiltinCompressor::GetCompressor(CompressionType::kNoCompression),
             TablePropertiesCollectorFactory::Context::kUnknownColumnFamily,
             column_family_name, unknown_level),
         file_writer.get()));
