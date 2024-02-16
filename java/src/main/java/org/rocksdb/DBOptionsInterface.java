@@ -8,6 +8,11 @@ package org.rocksdb;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Interface for DB Options.
+ *
+ * @param <T> the concrete type of DBOptions.
+ */
 public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * Use this if your DB is very small (like under 1GB) and you don't want to
@@ -78,8 +83,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    *
    * @param flag a flag indicating if missing column families shall be
    *     created automatically.
-   * @return true if missing column families shall be created automatically
-   *     on open.
+   * @return the instance of the current Options
    */
   T setCreateMissingColumnFamilies(boolean flag);
 
@@ -159,7 +163,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * Use to track SST files and control their file deletion rate.
-   *
+   * <p>
    * Features:
    *  - Throttle the deletion rate of the SST files.
    *  - Keep track the total size of all SST files.
@@ -167,7 +171,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    *    the DB wont do any further flushes or compactions and will set the
    *    background error.
    *  - Can be shared between multiple dbs.
-   *
+   * <p>
    *  Limitations:
    *  - Only track and throttle deletes of SST files in
    *    first db_path (db_name if db_paths is empty).
@@ -208,7 +212,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * If {@link MutableDBOptionsInterface#maxOpenFiles()} is -1, DB will open
    * all files on DB::Open(). You can use this option to increase the number
    * of threads used to open the files.
-   *
+   * <p>
    * Default: 16
    *
    * @param maxFileOpeningThreads the maximum number of threads to use to
@@ -222,7 +226,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * If {@link MutableDBOptionsInterface#maxOpenFiles()} is -1, DB will open all
    * files on DB::Open(). You can use this option to increase the number of
    * threads used to open the files.
-   *
+   * <p>
    * Default: 16
    *
    * @return the maximum number of threads to use to open files
@@ -278,27 +282,27 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * A list of paths where SST files can be put into, with its target size.
    * Newer data is placed into paths specified earlier in the vector while
    * older data gradually moves to paths specified later in the vector.
-   *
+   * <p>
    * For example, you have a flash device with 10GB allocated for the DB,
    * as well as a hard drive of 2TB, you should config it to be:
    *    [{"/flash_path", 10GB}, {"/hard_drive", 2TB}]
-   *
+   * <p>
    * The system will try to guarantee data under each path is close to but
    * not larger than the target size. But current and future file sizes used
    * by determining where to place a file are based on best-effort estimation,
    * which means there is a chance that the actual size under the directory
    * is slightly more than target size under some workloads. User should give
    * some buffer room for those cases.
-   *
+   * <p>
    * If none of the paths has sufficient room to place a file, the file will
    * be placed to the last path anyway, despite to the target size.
-   *
+   * <p>
    * Placing newer data to earlier paths is also best-efforts. User should
    * expect user files to be placed in higher levels in some extreme cases.
-   *
+   * <p>
    * If left empty, only one path will be used, which is db_name passed when
    * opening the DB.
-   *
+   * <p>
    * Default: empty
    *
    * @param dbPaths the paths and target sizes
@@ -311,27 +315,27 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * A list of paths where SST files can be put into, with its target size.
    * Newer data is placed into paths specified earlier in the vector while
    * older data gradually moves to paths specified later in the vector.
-   *
+   * <p>
    * For example, you have a flash device with 10GB allocated for the DB,
    * as well as a hard drive of 2TB, you should config it to be:
    *    [{"/flash_path", 10GB}, {"/hard_drive", 2TB}]
-   *
+   * <p>
    * The system will try to guarantee data under each path is close to but
    * not larger than the target size. But current and future file sizes used
    * by determining where to place a file are based on best-effort estimation,
    * which means there is a chance that the actual size under the directory
    * is slightly more than target size under some workloads. User should give
    * some buffer room for those cases.
-   *
+   * <p>
    * If none of the paths has sufficient room to place a file, the file will
    * be placed to the last path anyway, despite to the target size.
-   *
+   * <p>
    * Placing newer data to earlier paths is also best-efforts. User should
    * expect user files to be placed in higher levels in some extreme cases.
-   *
+   * <p>
    * If left empty, only one path will be used, which is db_name passed when
    * opening the DB.
-   *
+   * <p>
    * Default: {@link java.util.Collections#emptyList()}
    *
    * @return dbPaths the paths and target sizes
@@ -352,7 +356,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * Returns the directory of info log.
-   *
+   * <p>
    * If it is empty, the log files will be in the same dir as data.
    * If it is non empty, the log files will be in the specified dir,
    * and the db data dir's absolute path will be used as the log file
@@ -377,7 +381,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * Returns the path to the write-ahead-logs (WAL) directory.
-   *
+   * <p>
    * If it is empty, the log files will be in the same dir as data,
    *   dbname is used as the data dir by default
    * If it is non empty, the log files will be in kept the specified dir.
@@ -439,7 +443,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * `max_background_jobs = max_background_compactions + max_background_flushes`
    * in the case where user sets at least one of `max_background_compactions` or
    * `max_background_flushes`.
-   *
+   * <p>
    * Specifies the maximum number of concurrent background flush jobs.
    * If you're increasing this, also consider increasing number of threads in
    * HIGH priority thread pool. For more information, see
@@ -463,7 +467,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * `max_background_jobs = max_background_compactions + max_background_flushes`
    * in the case where user sets at least one of `max_background_compactions` or
    * `max_background_flushes`.
-   *
+   * <p>
    * Returns the maximum number of concurrent background flush jobs.
    * If you're increasing this, also consider increasing number of threads in
    * HIGH priority thread pool. For more information, see
@@ -542,16 +546,16 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * Recycle log files.
-   *
+   * <p>
    * If non-zero, we will reuse previously written log files for new
    * logs, overwriting the old data.  The value indicates how many
    * such files we will keep around at any point in time for later
    * use.
-   *
+   * <p>
    * This is more efficient because the blocks are already
    * allocated and fdatasync does not need to update the inode after
    * each write.
-   *
+   * <p>
    * Default: 0
    *
    * @param recycleLogFileNum the number of log files to keep for recycling
@@ -562,16 +566,16 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * Recycle log files.
-   *
+   * <p>
    * If non-zero, we will reuse previously written log files for new
    * logs, overwriting the old data.  The value indicates how many
    * such files we will keep around at any point in time for later
    * use.
-   *
+   * <p>
    * This is more efficient because the blocks are already
    * allocated and fdatasync does not need to update the inode after
    * each write.
-   *
+   * <p>
    * Default: 0
    *
    * @return the number of log files kept for recycling
@@ -617,17 +621,17 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * {@link #walTtlSeconds()} and {@link #walSizeLimitMB()} affect when WALs
    * will be archived and deleted.
-   *
+   * <p>
    * When both are zero, obsolete WALs will not be archived and will be deleted
    * immediately. Otherwise, obsolete WALs will be archived prior to deletion.
-   *
+   * <p>
    * When `WAL_size_limit_MB` is nonzero, archived WALs starting with the
    * earliest will be deleted until the total size of the archive falls below
    * this limit. All empty WALs will be deleted.
-   *
+   * <p>
    * When `WAL_ttl_seconds` is nonzero, archived WALs older than
    * `WAL_ttl_seconds` will be deleted.
-   *
+   * <p>
    * When only `WAL_ttl_seconds` is nonzero, the frequency at which archived
    * WALs are deleted is every `WAL_ttl_seconds / 2` seconds. When only
    * `WAL_size_limit_MB` is nonzero, the deletion frequency is every ten
@@ -643,17 +647,17 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * WalTtlSeconds() and walSizeLimitMB() affect when WALs will be archived and
    * deleted.
-   *
+   * <p>
    * When both are zero, obsolete WALs will not be archived and will be deleted
    * immediately. Otherwise, obsolete WALs will be archived prior to deletion.
-   *
+   * <p>
    * When `WAL_size_limit_MB` is nonzero, archived WALs starting with the
    * earliest will be deleted until the total size of the archive falls below
    * this limit. All empty WALs will be deleted.
-   *
+   * <p>
    * When `WAL_ttl_seconds` is nonzero, archived WALs older than
    * `WAL_ttl_seconds` will be deleted.
-   *
+   * <p>
    * When only `WAL_ttl_seconds` is nonzero, the frequency at which archived
    * WALs are deleted is every `WAL_ttl_seconds / 2` seconds. When only
    * `WAL_size_limit_MB` is nonzero, the deletion frequency is every ten
@@ -668,17 +672,17 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * WalTtlSeconds() and walSizeLimitMB() affect how archived logs
    * will be deleted.
-   *
+   * <p>
    * When both are zero, obsolete WALs will not be archived and will be deleted
    * immediately. Otherwise, obsolete WALs will be archived prior to deletion.
-   *
+   * <p>
    * When `WAL_size_limit_MB` is nonzero, archived WALs starting with the
    * earliest will be deleted until the total size of the archive falls below
    * this limit. All empty WALs will be deleted.
-   *
+   * <p>
    * When `WAL_ttl_seconds` is nonzero, archived WALs older than
    * `WAL_ttl_seconds` will be deleted.
-   *
+   * <p>
    * When only `WAL_ttl_seconds` is nonzero, the frequency at which archived
    * WALs are deleted is every `WAL_ttl_seconds / 2` seconds. When only
    * `WAL_size_limit_MB` is nonzero, the deletion frequency is every ten
@@ -694,17 +698,17 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * WalTtlSeconds() and walSizeLimitMB() affect when WALs will be archived and
    * deleted.
-   *
+   * <p>
    * When both are zero, obsolete WALs will not be archived and will be deleted
    * immediately. Otherwise, obsolete WALs will be archived prior to deletion.
-   *
+   * <p>
    * When `WAL_size_limit_MB` is nonzero, archived WALs starting with the
    * earliest will be deleted until the total size of the archive falls below
    * this limit. All empty WALs will be deleted.
-   *
+   * <p>
    * When `WAL_ttl_seconds` is nonzero, archived WALs older than
    * `WAL_ttl_seconds` will be deleted.
-   *
+   * <p>
    * When only `WAL_ttl_seconds` is nonzero, the frequency at which archived
    * WALs are deleted is every `WAL_ttl_seconds / 2` seconds. When only
    * `WAL_size_limit_MB` is nonzero, the deletion frequency is every ten
@@ -720,7 +724,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * The maximum limit of number of bytes that are written in a single batch
    * of WAL or memtable write. It is followed when the leader write size
    * is larger than 1/8 of this limit.
-   *
+   * <p>
    * Default: 1 MB
    *
    * @param maxWriteBatchGroupSizeBytes the maximum limit of number of bytes, see description.
@@ -732,7 +736,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * The maximum limit of number of bytes that are written in a single batch
    * of WAL or memtable write. It is followed when the leader write size
    * is larger than 1/8 of this limit.
-   *
+   * <p>
    * Default: 1 MB
    *
    * @return the maximum limit of number of bytes, see description.
@@ -885,13 +889,13 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * Amount of data to build up in memtables across all column
    * families before writing to disk.
-   *
+   * <p>
    * This is distinct from {@link ColumnFamilyOptions#writeBufferSize()},
    * which enforces a limit for a single memtable.
-   *
+   * <p>
    * This feature is disabled by default. Specify a non-zero value
    * to enable it.
-   *
+   * <p>
    * Default: 0 (disabled)
    *
    * @param dbWriteBufferSize the size of the write buffer
@@ -903,7 +907,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * Use passed {@link WriteBufferManager} to control memory usage across
    * multiple column families and/or DB instances.
-   *
+   * <p>
    * Check <a href="https://github.com/facebook/rocksdb/wiki/Write-Buffer-Manager">
    *     https://github.com/facebook/rocksdb/wiki/Write-Buffer-Manager</a>
    * for more details on when to use it
@@ -925,13 +929,13 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * Amount of data to build up in memtables across all column
    * families before writing to disk.
-   *
+   * <p>
    * This is distinct from {@link ColumnFamilyOptions#writeBufferSize()},
    * which enforces a limit for a single memtable.
-   *
+   * <p>
    * This feature is disabled by default. Specify a non-zero value
    * to enable it.
-   *
+   * <p>
    * Default: 0 (disabled)
    *
    * @return the size of the write buffer
@@ -949,11 +953,11 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * always try to read ahead.
    * With read-ahead we always pre-allocate buffer to the size instead of
    * growing it up to a limit.
-   *
+   * <p>
    * This option is currently honored only on Windows
-   *
+   * <p>
    * Default: 1 Mb
-   *
+   * <p>
    * Special value: 0 - means do not maintain per instance buffer. Allocate
    *                per request buffer and avoid locking.
    *
@@ -974,11 +978,11 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * {@link MutableDBOptionsInterface#compactionReadaheadSize()} value and
    * always try to read ahead. With read-ahead we always pre-allocate buffer
    * to the size instead of growing it up to a limit.
-   *
+   * <p>
    * This option is currently honored only on Windows
-   *
+   * <p>
    * Default: 1 Mb
-   *
+   * <p>
    * Special value: 0 - means do not maintain per instance buffer. Allocate
    *                per request buffer and avoid locking.
    *
@@ -1012,7 +1016,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * Sets the {@link EventListener}s whose callback functions
    * will be called when specific RocksDB event happens.
-   *
+   * <p>
    * Note: the RocksJava API currently only supports EventListeners implemented in Java.
    * It could be extended in future to also support adding/removing EventListeners implemented in
    * C++.
@@ -1026,7 +1030,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * Sets the {@link EventListener}s whose callback functions
    * will be called when specific RocksDB event happens.
-   *
+   * <p>
    * Note: the RocksJava API currently only supports EventListeners implemented in Java.
    * It could be extended in future to also support adding/removing EventListeners implemented in
    * C++.
@@ -1038,7 +1042,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * If true, then the status of the threads involved in this DB will
    * be tracked and available via GetThreadList() API.
-   *
+   * <p>
    * Default: false
    *
    * @param enableThreadTracking true to enable tracking
@@ -1050,7 +1054,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * If true, then the status of the threads involved in this DB will
    * be tracked and available via GetThreadList() API.
-   *
+   * <p>
    * Default: false
    *
    * @return true if tracking is enabled
@@ -1061,7 +1065,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * By default, a single write thread queue is maintained. The thread gets
    * to the head of the queue becomes write batch group leader and responsible
    * for writing to WAL and memtable for the batch group.
-   *
+   * <p>
    * If {@link #enablePipelinedWrite()} is true, separate write thread queue is
    * maintained for WAL write and memtable write. A write thread first enter WAL
    * writer queue and then memtable writer queue. Pending thread on the WAL
@@ -1069,7 +1073,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * WAL writing but not the memtable writing. Enabling the feature may improve
    * write throughput and reduce latency of the prepare phase of two-phase
    * commit.
-   *
+   * <p>
    * Default: false
    *
    * @param enablePipelinedWrite true to enabled pipelined writes
@@ -1096,7 +1100,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * throughput. Using TransactionDB with WRITE_PREPARED write policy and
    * {@link #twoWriteQueues()} true is one way to achieve immutable snapshots despite
    * unordered_write.
-   *
+   * <p>
    * By default, i.e., when it is false, rocksdb does not advance the sequence
    * number for new snapshots unless all the writes with lower sequence numbers
    * are already finished. This provides the immutability that we except from
@@ -1241,7 +1245,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * compaction decision by loading table properties from many files.
    * Turning off this feature will improve DBOpen time especially in
    * disk environment.
-   *
+   * <p>
    * Default: false
    *
    * @param skipStatsUpdateOnDbOpen true if updating stats will be skipped
@@ -1255,7 +1259,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * compaction decision by loading table properties from many files.
    * Turning off this feature will improve DBOpen time especially in
    * disk environment.
-   *
+   * <p>
    * Default: false
    *
    * @return true if updating stats will be skipped
@@ -1269,7 +1273,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * We'll still check that all required sst files exist.
    * If {@code paranoid_checks} is false, this option is ignored, and sst files are
    * not checked at all.
-   *
+   * <p>
    * Default: false
    *
    * @param skipCheckingSstFileSizesOnDbOpen if true, then SST file sizes will not be checked
@@ -1285,7 +1289,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * We'll still check that all required sst files exist.
    * If {@code paranoid_checks} is false, this option is ignored, and sst files are
    * not checked at all.
-   *
+   * <p>
    * Default: false
    *
    * @return true, if file sizes will not be checked when calling {@link RocksDB#open(String)}.
@@ -1294,7 +1298,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * Recovery mode to control the consistency while replaying WAL
-   *
+   * <p>
    * Default: {@link WALRecoveryMode#PointInTimeRecovery}
    *
    * @param walRecoveryMode The WAL recover mode
@@ -1305,7 +1309,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * Recovery mode to control the consistency while replaying WAL
-   *
+   * <p>
    * Default: {@link WALRecoveryMode#PointInTimeRecovery}
    *
    * @return The WAL recover mode
@@ -1315,7 +1319,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * if set to false then recovery will fail when a prepared
    * transaction is encountered in the WAL
-   *
+   * <p>
    * Default: false
    *
    * @param allow2pc true if two-phase-commit is enabled
@@ -1327,7 +1331,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * if set to false then recovery will fail when a prepared
    * transaction is encountered in the WAL
-   *
+   * <p>
    * Default: false
    *
    * @return true if two-phase-commit is enabled
@@ -1336,7 +1340,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * A global cache for table-level rows.
-   *
+   * <p>
    * Default: null (disabled)
    *
    * @param rowCache The global row cache
@@ -1347,7 +1351,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * A global cache for table-level rows.
-   *
+   * <p>
    * Default: null (disabled)
    *
    * @return The global row cache
@@ -1379,7 +1383,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * If true, then DB::Open / CreateColumnFamily / DropColumnFamily
    * / SetOptions will fail if options file is not detected or properly
    * persisted.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @param failIfOptionsFileError true if we should fail if there is an error
@@ -1393,7 +1397,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * If true, then DB::Open / CreateColumnFamily / DropColumnFamily
    * / SetOptions will fail if options file is not detected or properly
    * persisted.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @return true if we should fail if there is an error in the options file
@@ -1403,7 +1407,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * If true, then print malloc stats together with rocksdb.stats
    * when printing to LOG.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @param dumpMallocStats true if malloc stats should be printed to LOG
@@ -1415,7 +1419,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
   /**
    * If true, then print malloc stats together with rocksdb.stats
    * when printing to LOG.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @return true if malloc stats should be printed to LOG
@@ -1428,7 +1432,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * to avoid (but not guarantee not to) flush during recovery. Also, existing
    * WAL logs will be kept, so that if crash happened before flush, we still
    * have logs to recover from.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @param avoidFlushDuringRecovery true to try to avoid (but not guarantee
@@ -1444,7 +1448,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * to avoid (but not guarantee not to) flush during recovery. Also, existing
    * WAL logs will be kept, so that if crash happened before flush, we still
    * have logs to recover from.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @return true to try to avoid (but not guarantee not to) flush during
@@ -1460,7 +1464,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    *     1) Disable some internal optimizations around SST file compression
    *     2) Reserve bottom-most level for ingested files only.
    *     3) Note that num_levels should be &gt;= 3 if this option is turned on.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @param allowIngestBehind true to allow ingest behind, false to disallow.
@@ -1483,7 +1487,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * allows the memtable writes not to lag behind other writes. It can be used
    * to optimize MySQL 2PC in which only the commits, which are serial, write to
    * memtable.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @param twoWriteQueues true to enable two write queues, false otherwise.
@@ -1503,7 +1507,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * If true WAL is not flushed automatically after each write. Instead it
    * relies on manual invocation of FlushWAL to write the WAL buffer to its
    * file.
-   *
+   * <p>
    * DEFAULT: false
    *
    * @param manualWalFlush true to set disable automatic WAL flushing,
@@ -1531,7 +1535,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * For manual flush, application has to specify which column families to
    * flush atomically in {@link RocksDB#flush(FlushOptions, List)}.
    * For auto-triggered flush, RocksDB atomically flushes ALL column families.
-   *
+   * <p>
    * Currently, any WAL-enabled writes after atomic flush may be replayed
    * independently if the process crashes later and tries to recover.
    *
@@ -1543,7 +1547,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
 
   /**
    * Determine if atomic flush of multiple column families is enabled.
-   *
+   * <p>
    * See {@link #setAtomicFlush(boolean)}.
    *
    * @return true if atomic flush is enabled.
@@ -1644,7 +1648,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * The number of bytes to prefetch when reading the log. This is mostly useful
    * for reading a remotely located log, as it can save the number of
    * round-trips. If 0, then the prefetching is disabled.
-   *
+   * <p>
    * Default: 0
    *
    * @param logReadaheadSize the number of bytes to prefetch when reading the log.
@@ -1656,7 +1660,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * The number of bytes to prefetch when reading the log. This is mostly useful
    * for reading a remotely located log, as it can save the number of
    * round-trips. If 0, then the prefetching is disabled.
-   *
+   * <p>
    * Default: 0
    *
    * @return the number of bytes to prefetch when reading the log.
@@ -1699,7 +1703,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * can be auto-recovered (e.g., retryable IO Error during Flush or WAL write),
    * then db resume is called in background to recover from the error. If this
    * value is 0 or negative, db resume will not be called.
-   *
+   * <p>
    * Default: INT_MAX
    *
    * @param maxBgerrorResumeCount maximum number of times db resume should be called when IO Error
@@ -1715,7 +1719,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * can be auto-recovered (e.g., retryable IO Error during Flush or WAL write),
    * then db resume is called in background to recover from the error. If this
    * value is 0 or negative, db resume will not be called.
-   *
+   * <p>
    * Default: INT_MAX
    *
    * @return maximum number of times db resume should be called when IO Error happens.
@@ -1726,7 +1730,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * If max_bgerror_resume_count is &ge; 2, db resume is called multiple times.
    * This option decides how long to wait to retry the next resume if the
    * previous resume fails and satisfy redo resume conditions.
-   *
+   * <p>
    * Default: 1000000 (microseconds).
    *
    * @param bgerrorResumeRetryInterval how many microseconds to wait between DB resume attempts.
@@ -1738,7 +1742,7 @@ public interface DBOptionsInterface<T extends DBOptionsInterface<T>> {
    * If max_bgerror_resume_count is &ge; 2, db resume is called multiple times.
    * This option decides how long to wait to retry the next resume if the
    * previous resume fails and satisfy redo resume conditions.
-   *
+   * <p>
    * Default: 1000000 (microseconds).
    *
    * @return the instance of the current object.
