@@ -1354,7 +1354,7 @@ public class RocksDB extends RocksObject {
           getDirect(nativeHandle_, opt.nativeHandle_, key, key.position(), key.remaining(), value,
               value.position(), value.remaining(), columnFamilyHandle.nativeHandle_);
       if (result != NOT_FOUND) {
-        value.limit(Math.min(value.limit(), value.position() + result));
+        value.position(Math.min(value.limit(), value.position() + result));
       }
       key.position(key.limit());
       return result;
@@ -1363,7 +1363,7 @@ public class RocksDB extends RocksObject {
           key.arrayOffset() + key.position(), key.remaining(), value.array(),
           value.arrayOffset() + value.position(), value.remaining());
       if (result != NOT_FOUND) {
-        value.limit(Math.min(value.limit(), value.position() + result));
+        value.position(Math.min(value.limit(), value.position() + result));
       }
       key.position(key.limit());
       return result;
