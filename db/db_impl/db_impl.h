@@ -2943,6 +2943,11 @@ DBOptions SanitizeOptions(const std::string& db, const DBOptions& src,
                           bool read_only = false,
                           Status* logger_creation_s = nullptr);
 
+#ifdef OS_LINUX
+size_t GetCompactionReadaheadSizeSystemLimit(
+    const std::vector<DbPath>& db_paths);
+#endif  // OS_LINUX
+
 CompressionType GetCompressionFlush(const ImmutableCFOptions& ioptions,
                                     const MutableCFOptions& mutable_cf_options);
 
