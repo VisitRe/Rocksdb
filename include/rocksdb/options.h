@@ -2283,23 +2283,8 @@ struct SizeApproximationOptions {
 };
 
 struct CompactionServiceOptionsOverride {
-  // Currently pointer configurations are not passed to compaction service
-  // compaction so the user needs to set it. It will be removed once pointer
-  // configuration passing is supported.
   Env* env = Env::Default();
   std::shared_ptr<FileChecksumGenFactory> file_checksum_gen_factory = nullptr;
-
-  // DEPRECATED - CFOption pointer configurations will be passed as static name
-  // These will need to be registered in the remote worker's ObjectRegistry,
-  // then created by Type::CreateFromString() when needed.
-  const Comparator* comparator = BytewiseComparator();
-  std::shared_ptr<MergeOperator> merge_operator = nullptr;
-  const CompactionFilter* compaction_filter = nullptr;
-  std::shared_ptr<CompactionFilterFactory> compaction_filter_factory = nullptr;
-  std::shared_ptr<const SliceTransform> prefix_extractor = nullptr;
-  std::shared_ptr<TableFactory> table_factory;
-  std::shared_ptr<SstPartitionerFactory> sst_partitioner_factory = nullptr;
-  // END of deprecation marker
 
   // Only subsets of events are triggered in remote compaction worker, like:
   // `OnTableFileCreated`, `OnTableFileCreationStarted`,
